@@ -377,6 +377,11 @@ static void myr_joystick_task(void) {
     if (x < -127) { x = -127; }
     if (x > 127) { x = 127; }
 
+    // if (y < -120) { tap_code(KC_DOWN); }
+    // if (y > 120) { tap_code(KC_UP); }
+    // if (x < -120) { tap_code(KC_LEFT); }
+    // if (x > 120) { tap_code(KC_RIGHT); }
+
     // .. and set the report
     report.y = y;
     report.x = x;
@@ -392,7 +397,7 @@ void myriad_task(void) {
             // Handled via hook
             break;
         case SKB_ENCODER:
-            // Handled via hook
+            myr_joystick_task();
             break;
         case SKB_JOYSTICK:
             myr_joystick_task();
