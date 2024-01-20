@@ -13,10 +13,15 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+SRC += features/select_word.c
+SRC += features/layer_lock.c
 ## Hardware features
 
 # OLED: optional, can be installed in socket
 OLED_ENABLE = yes          # Enable OLEDs, `yes` or `no`
+# TRI_LAYER_ENABLE = yes
+
+CAPS_WORD_ENABLE = yes
 
 # Audio: optional, requires soldering
 # The Elora is equipped with a footprint
@@ -26,7 +31,7 @@ AUDIO_ENABLE = no          # Enable audio support, `yes` or `no`
 ## Software features
 
 # Supported keycodes
-MOUSEKEY_ENABLE = yes      # Mouse movement using keys
+MOUSEKEY_ENABLE = no      # Mouse movement using keys
 EXTRAKEY_ENABLE = yes      # Audio and system control
 
 # N-key rollover instead of 6-key rollover

@@ -22,12 +22,19 @@
 // Debounce reduces chatter (unintended double-presses) - set 0 if debouncing is not needed
 #define DEBOUNCE 5
 
+// #define TRI_LAYER_LOWER_LAYER 1
+// #define TRI_LAYER_UPPER_LAYER 2
+// #define TRI_LAYER_ADJUST_LAYER 3
+#define CAPS_WORD_IDLE_TIMEOUT 3000  // 3 seconds.
+
 /// Vial-specific settings
 
 // Default is 2, needed because keymap has 7 layers
-#define DYNAMIC_KEYMAP_LAYER_COUNT 8
+#define DYNAMIC_KEYMAP_LAYER_COUNT 5
 
 #define VIAL_KEYBOARD_UID {0xB3, 0x8D, 0x94, 0xDA, 0xB3, 0xD7, 0xDC, 0x3D}
 
 #define VIAL_UNLOCK_COMBO_ROWS { 3, 9 }
 #define VIAL_UNLOCK_COMBO_COLS { 2, 5 }
+
+#define USB_POLLING_INTERVAL_MS 1

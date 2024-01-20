@@ -15,21 +15,23 @@
  */
 
 #include QMK_KEYBOARD_H
+#include "features/select_word.h"
+#include "features/layer_lock.h"
 
 enum layers {
     _QWERTY = 0,
+    _NO_HRM,
     _NAV,
     _SYM,
-    _FUNCTION,
     _ADJUST,
 };
 
 // Aliases for readability
 #define QWERTY   DF(_QWERTY)
+#define NO_HRM   DF(_NO_HRM)
 
 #define SYM      MO(_SYM)
 #define NAV      MO(_NAV)
-#define FKEYS    MO(_FUNCTION)
 #define ADJUST   MO(_ADJUST)
 
 #define CTL_ESC  MT(MOD_LCTL, KC_ESC)
@@ -38,6 +40,22 @@ enum layers {
 #define CTL_MINS MT(MOD_RCTL, KC_MINUS)
 #define ALT_ENT  MT(MOD_LALT, KC_ENT)
 #define CTL_ALT OSM(MOD_LCTL | MOD_LSFT)
+#define CT_AL_SF OSM(MOD_LCTL | MOD_LALT | MOD_LSFT)
+
+#define T_LC_A LCTL_T(KC_A)
+#define T_LA_S LALT_T(KC_S)
+#define T_LS_D LSFT_T(KC_D)
+#define T_LG_F LGUI_T(KC_F)
+
+#define T_RC_SC RCTL_T(KC_SCLN)
+#define T_RA_L RALT_T(KC_L)
+#define T_RS_K RSFT_T(KC_K)
+#define T_RG_J RGUI_T(KC_J)
+
+enum custom_keycodes {
+  SELWORD = SAFE_RANGE,
+  LLOCK,
+};
 
 // Note: LAlt/Enter (ALT_ENT) is not the same thing as the keyboard shortcut Alt+Enter.
 // The notation `mod/tap` denotes a key that activates the modifier `mod` when held down, and
@@ -53,11 +71,11 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
  * |--------+------+------+------+------+------|      |------|  |------|      |------+------+------+------+------+--------|
  * |  Tab   |   Q  |   W  |   E  |   R  |   T  |      |LCtrl |  | RCtrl|      |   Y  |   U  |   I  |   O  |   P  | Bkspc  |
  * |--------+------+------+------+------+------|      |------|  |------|      |------+------+------+------+------+--------|
- * | LShift |   A  |   S  |   D  |   F  |   G  |      | LAlt |  | RAlt |      |   H  |   J  |   K  |   L  | ;  : | Enter  |
+ * | LGUI   |Ctl/A |Opt/S |Sft/D |Cmd/F |   G  |      | LAlt |  | RAlt |      |Cmd/H |Sft/J |Opt/K |Ctl/L | ;  : | Enter  |
  * |--------+------+------+------+------+------+------+------|  |------|------+------+------+------+------+------+--------|
- * |Ctrl/Esc|   Z  |   X  |   C  |   V  |   B  | [ {  |Adjust|  |F-keys|  ] } |   N  |   M  | ,  < | . >  | /  ? |Shft/' "|
+ * | LShift |   Z  |   X  |   C  |   V  |   B  | [ {  |LLock |  |SelWrd|  ] } |   N  |   M  | ,  < | . >  | /  ? |Shft/' "|
  * `----------------------+------+------+------+------+------|  |------+------+------+------+------+----------------------'
- *                        | LCTRL| LALT | Space| LGUI | Nav  |  | Sym  | RALT | Space| RGUI |CpsLck|
+ *                        | LCTRL| LALT | LGUI | Space| Nav  |  | Sym  | RALT | Space| RGUI |CpsLck|
  *                        |      |      |      |      |      |  |      |      |      |      |      |
  *                        `----------------------------------'  `----------------------------------'
  *
@@ -68,9 +86,39 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     [_QWERTY] = LAYOUT_myr(
       KC_GRV  , KC_1 ,  KC_2   ,  KC_3  ,   KC_4 ,   KC_5 ,         KC_LSFT,     KC_RSFT,          KC_6 ,  KC_7 ,  KC_8 ,   KC_9 ,  KC_0 , KC_MINS,
       KC_TAB  , KC_Q ,  KC_W   ,  KC_E  ,   KC_R ,   KC_T ,         KC_LCTL,     KC_RCTL,          KC_Y ,  KC_U ,  KC_I ,   KC_O ,  KC_P , KC_BSPC,
-      KC_LSFT , KC_A ,  KC_S   ,  KC_D  ,   KC_F ,   KC_G ,         KC_LALT,     KC_RALT,          KC_H ,  KC_J ,  KC_K ,   KC_L ,KC_SCLN, KC_ENT,
-      CTL_ESC , KC_Z ,  KC_X   ,  KC_C  ,   KC_V ,   KC_B , KC_LBRC, ADJUST,     FKEYS  , KC_RBRC, KC_N ,  KC_M ,KC_COMM, KC_DOT ,KC_SLSH, SFT_QUOT,
-                                 KC_LCTL, KC_LALT, KC_SPC , KC_LGUI, NAV   ,     SYM    , KC_RALT, KC_SPC,KC_RGUI,KC_CAPS,
+      KC_LGUI ,T_LC_A, T_LA_S ,  T_LS_D , T_LG_F ,   KC_G ,         KC_LALT,     KC_RALT,          KC_H , T_RG_J, T_RS_K, T_RA_L ,T_RC_SC, KC_ENT,
+      KC_LSFT , KC_Z ,  KC_X   ,  KC_C  ,   KC_V ,   KC_B , KC_LBRC, LLOCK ,     SELWORD, KC_RBRC, KC_N ,  KC_M ,KC_COMM, KC_DOT ,KC_SLSH, SFT_QUOT,
+                                 KC_LCTL, KC_LALT, KC_LGUI, KC_SPC ,  NAV  ,       SYM  , KC_SPC ,KC_ENT,OSM(MOD_RALT),CW_TOGG,
+
+      KC_MPRV, KC_MNXT, KC_MPLY, KC_MSTP,    KC_MUTE,                            KC_MPRV, KC_MNXT, KC_MPLY, KC_MSTP,    KC_MUTE
+    ),
+
+/*
+ * Base Layer: QWERTY
+ *
+ * ,-------------------------------------------.      ,------.  ,------.      ,-------------------------------------------.
+ * |    `   |   1  |   2  |   3  |   4  |   5  |      |LShift|  |RShift|      |   6  |   7  |   8  |   9  |   0  |   -    |
+ * |--------+------+------+------+------+------|      |------|  |------|      |------+------+------+------+------+--------|
+ * |  Tab   |   Q  |   W  |   E  |   R  |   T  |      |LCtrl |  | RCtrl|      |   Y  |   U  |   I  |   O  |   P  | Bkspc  |
+ * |--------+------+------+------+------+------|      |------|  |------|      |------+------+------+------+------+--------|
+ * | LGUI   |   A  |   S  |   D  |   F  |   G  |      | LAlt |  | RAlt |      |   H  |   J  |   K  |   L  | ;  : | Enter  |
+ * |--------+------+------+------+------+------+------+------|  |------|------+------+------+------+------+------+--------|
+ * | LShift |   Z  |   X  |   C  |   V  |   B  | [ {  |LLock |  |SelWrd|  ] } |   N  |   M  | ,  < | . >  | /  ? |Shft/' "|
+ * `----------------------+------+------+------+------+------|  |------+------+------+------+------+----------------------'
+ *                        | LCTRL| LALT | LGUI | Space| Nav  |  | Sym  | RALT | Space| RGUI |CpsLck|
+ *                        |      |      |      |      |      |  |      |      |      |      |      |
+ *                        `----------------------------------'  `----------------------------------'
+ *
+ * ,----------------------------.      ,------.                 ,----------------------------.      ,------.
+ * | Prev | Next | Pause | Stop |      | Mute |                 | Prev | Next | Pause | Stop |      | Mute |
+ * `----------------------------'      `------'                 `----------------------------'      '------'
+ */
+    [_NO_HRM] = LAYOUT_myr(
+      KC_GRV  , KC_1 ,  KC_2   ,  KC_3  ,   KC_4 ,   KC_5 ,         KC_LSFT,     KC_RSFT,          KC_6 ,  KC_7 ,  KC_8 ,   KC_9 ,  KC_0 , KC_MINS,
+      KC_TAB  , KC_Q ,  KC_W   ,  KC_E  ,   KC_R ,   KC_T ,         KC_LCTL,     KC_RCTL,          KC_Y ,  KC_U ,  KC_I ,   KC_O ,  KC_P , KC_BSPC,
+      KC_LGUI , KC_A ,  KC_S   ,  KC_D  ,   KC_F ,   KC_G ,         KC_LALT,     KC_RALT,          KC_H ,  KC_J ,  KC_K ,   KC_L ,KC_SCLN, KC_ENT,
+      KC_LSFT , KC_Z ,  KC_X   ,  KC_C  ,   KC_V ,   KC_B , KC_LBRC, LLOCK ,     SELWORD, KC_RBRC, KC_N ,  KC_M ,KC_COMM, KC_DOT ,KC_SLSH, SFT_QUOT,
+                                 KC_LCTL, KC_LALT, KC_LGUI, KC_SPC ,  NAV  ,       SYM  , KC_SPC ,KC_ENT,OSM(MOD_RALT),CW_TOGG,
 
       KC_MPRV, KC_MNXT, KC_MPLY, KC_MSTP,    KC_MUTE,                            KC_MPRV, KC_MNXT, KC_MPLY, KC_MSTP,    KC_MUTE
     ),
@@ -79,11 +127,11 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
  * Nav Layer: Media, navigation
  *
  * ,-------------------------------------------.      ,------.  ,------.      ,-------------------------------------------.
- * | Escape |      |      |      |      |      |      |      |  |      |      |      |      |      |      |      | Delete |
+ * | Escape |      |      |      |      |      |      |      |  |      |      |      |      |      |      |      |        |
  * |--------+------+------+------+------+------|      |------|  |------|      |------+------+------+------+------+--------|
- * |        |      | Home |   ↑  |  End | Bkspc|      |      |  |      |      |      |      |      |      |PrtSc |        |
+ * |        |CtAlSf| Home |   ↑  |  End | Bkspc|      |      |  |      |      |      |      |      |      |PrtSc | Delete |
  * |--------+------+------+------+------+------|      |------|  |------|      |------+------+------+------+------+--------|
- * |        |CtlAlt|   ←  |   ↓  |   →  | Enter|      |      |  |      |      | Shift| Ctrl |  Alt |  GUI |      |        |
+ * |        |CtlAlt|   ←  |   ↓  |   →  | Enter|      |      |  |      |      |      |      |      |      |      |        |
  * |--------+------+------+------+------+------+------+------|  |------|------+------+------+------+------+------+--------|
  * |        |      |      |      |      |      |      |      |  |      |      |      |      |      |      |      |        |
  * `----------------------+------+------+------+------+------|  |------+------+------+------+------+----------------------'
@@ -97,8 +145,8 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
  */
     [_NAV] = LAYOUT_myr(
       KC_ESC , _______, _______, _______, _______, _______,          _______, _______,          _______, _______, _______, _______, _______, _______,
-      _______, _______, KC_HOME, KC_UP  , KC_END , KC_BSPC,          _______, _______,          _______, _______, _______, _______, KC_PSCR, KC_DEL ,
-      _______, CTL_ALT, KC_LEFT, KC_DOWN, KC_RGHT, KC_ENT ,          _______, _______,          KC_RSFT, KC_RCTL, KC_LALT, KC_RGUI, _______, _______,
+      _______,CT_AL_SF, KC_HOME, KC_UP  , KC_END , KC_BSPC,          _______, _______,          _______, _______, _______, _______, KC_PSCR, KC_DEL ,
+      _______,CTL_ALT , KC_LEFT, KC_DOWN, KC_RGHT, KC_ENT ,          _______, _______,          _______, _______, _______, _______, _______, _______,
       _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______,
                                  _______, _______, _______, _______, _______, _______, _______, _______, _______, _______,
 
@@ -143,37 +191,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
  * |--------+------+------+------+------+------|      |------|  |------|      |------+------+------+------+------+--------|
  * |        |  F5  |  F6  |  F7  |  F8  |      |      |      |  |      |      |      |      |      |      |      |        |
  * |--------+------+------+------+------+------|      |------|  |------|      |------+------+------+------+------+--------|
- * |        |  F9  | F10  | F11  | F12  |      |      |      |  |      |      | Shift| Ctrl |  Alt |  GUI |      |        |
- * |--------+------+------+------+------+------+------+------|  |------|------+------+------+------+------+------+--------|
- * |        |      |      |      |      |      |      |      |  |      |      |      |      |      |      |      |        |
- * `----------------------+------+------+------+------+------|  |------+------+------+------+------+----------------------'
- *                        |      |      |      |      |      |  |      |      |      |      |      |
- *                        |      |      |      |      |      |  |      |      |      |      |      |
- *                        `----------------------------------'  `----------------------------------'
- *
- * ,-----------------------------.      ,------.                ,---------------------------.      ,------.
- * |        |      |      |      |      |      |                |      |      |      |      |      |      |
- * `-----------------------------'      `------'                `---------------------------'      '------'
- */
-    [_FUNCTION] = LAYOUT_myr(
-      _______,   KC_F1 ,  KC_F2 ,  KC_F3 ,  KC_F4, _______,          _______, _______,          _______, _______, _______, _______, _______, _______,
-      _______,   KC_F5 ,  KC_F6 ,  KC_F7 ,  KC_F8, _______,          _______, _______,          _______, _______, _______, _______, _______, _______,
-      _______,   KC_F9 ,  KC_F10,  KC_F11, KC_F12, _______,          _______, _______,          KC_RSFT, KC_RCTL, KC_LALT, KC_RGUI, _______, _______,
-      _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______,
-                                 _______, _______, _______, _______, _______, _______, _______, _______, _______, _______,
-
-      _______, _______, _______, _______,          _______,                   _______, _______, _______, _______,          _______
-    ),
-
-/*
- * Adjust Layer: Default layer settings, RGB
- *
- * ,-------------------------------------------.      ,------.  ,------.      ,-------------------------------------------.
- * |        |      |      |      |      |      |      |      |  |      |      |      |      |      |      |      |        |
- * |--------+------+------+------+------+------|      |------|  |------|      |------+------+------+------+------+--------|
- * |        |      |      |      |      |      |      |      |  |      |      |      |      |      |      |      |        |
- * |--------+------+------+------+------+------|      |------|  |------|      |------+------+------+------+------+--------|
- * |        |      |      |      |      |      |      |      |  |      |      | TOG  | SAI  | HUI  | VAI  | MOD  |        |
+ * |        |  F9  | F10  | F11  | F12  |      |      |      |  |      |      | TOG  | SAI  | HUI  | VAI  | MOD  |        |
  * |--------+------+------+------+------+------+------+------|  |------|------+------+------+------+------+------+--------|
  * |        |      |      |      |      |      |      |      |  |      |      |      | SAD  | HUD  | VAD  | RMOD |        |
  * `----------------------+------+------+------+------+------|  |------+------+------+------+------+----------------------'
@@ -186,16 +204,14 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
  * `-----------------------------'      `------'                `---------------------------'      '------'
  */
     [_ADJUST] = LAYOUT_myr(
-      _______, _______, _______, _______, _______, _______,         _______, _______,          _______, _______, _______, _______,  _______, _______,
-      _______, _______, _______, _______, _______, _______,         _______, _______,          _______, _______, _______, _______,  _______, _______,
-      _______, _______, _______, _______, _______, _______,         _______, _______,          RGB_TOG, RGB_SAI, RGB_HUI, RGB_VAI,  RGB_MOD, _______,
-      _______, _______, _______, _______, _______, _______,_______, _______, _______, _______, _______, RGB_SAD, RGB_HUD, RGB_VAD, RGB_RMOD, _______,
-                                 _______, _______, _______,_______, _______, _______, _______, _______, _______, _______,
+      _______,   KC_F1 ,  KC_F2 ,  KC_F3 ,  KC_F4, _______,          _______, _______,          QWERTY , _______, _______, _______, _______, _______,
+      _______,   KC_F5 ,  KC_F6 ,  KC_F7 ,  KC_F8, _______,          _______, _______,          NO_HRM , _______, _______, _______, _______, _______,
+      _______,   KC_F9 ,  KC_F10,  KC_F11, KC_F12, _______,          _______, _______,          RGB_TOG, RGB_SAI, RGB_HUI, RGB_VAI, RGB_MOD, _______,
+      _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, _______, RGB_SAD, RGB_HUD, RGB_VAD,RGB_RMOD, _______,
+                                 _______, _______, _______, _______, _______, _______, _______, _______, _______, _______,
 
       _______, _______, _______, _______,          _______,                   _______, _______, _______, _______,          _______
-
     ),
-
 // /*
 //  * Layer template - LAYOUT
 //  *
@@ -269,6 +285,16 @@ bool encoder_update_user(uint8_t index, bool clockwise) {
 }
 #endif
 DELETE THIS LINE TO UNCOMMENT (2/2) */
+
+layer_state_t layer_state_set_user(layer_state_t state) {
+  return update_tri_layer_state(state, _NAV, _SYM, _ADJUST);
+}
+
+bool process_record_user(uint16_t keycode, keyrecord_t* record) {
+  if (!process_select_word(keycode, record, SELWORD)) { return false; }
+  if (!process_layer_lock(keycode, record, LLOCK)) { return false; }
+  return true;
+}
 
 // Vial-specific encoder code
 
