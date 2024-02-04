@@ -46,7 +46,7 @@ static bool myriad_reader(uint8_t *data, uint16_t length) {
     uint8_t last_page_size = length % 256;
 
     for (int i = 0; i < num_pages; i++) {
-        uint8_t reg = 0; // We always start on a page boundary, so this is always zero 
+        uint8_t reg = 0; // We always start on a page boundary, so this is always zero
         uint16_t read_length;
         if (i == num_pages - 1) {
             read_length = last_page_size;
@@ -98,7 +98,7 @@ static bool verify_checksum(uint8_t *data, uint16_t length, uint32_t checksum) {
 
     uint32_t a = 1, b = 0;
     size_t index;
-    
+
     // Process each byte of the data in order
     for (index = 0; index < length; ++index)
     {
@@ -106,7 +106,7 @@ static bool verify_checksum(uint8_t *data, uint16_t length, uint32_t checksum) {
         b = (b + a) % MOD_ADLER;
     }
     uint32_t calculated = ((b << 16) | a);
-    
+
     return calculated == checksum;
 }
 
@@ -155,6 +155,7 @@ static bool read_card_identity(uint8_t *data, uint16_t length, identity_record_t
 
 static myriad_card_t _detect_myriad(void) {
     setPinInput(MYRIAD_PRESENT);
+    wait_ms(100);
     // The pin has an external pull-up, and a Myriad card shorts it to ground.
     #ifndef MYRIAD_OVERRIDE_PRESENCE
     if (readPin(MYRIAD_PRESENT)) {
@@ -278,15 +279,16 @@ void myriad_hook_encoder(uint8_t count, bool pads[]) {
     pads[7] = !readPin(MYRIAD_GPIO3);
 }
 
-report_mouse_t pointing_device_driver_get_report(report_mouse_t mouse_report) {
-    if (myriad_card_init() != SKB_JOYSTICK) { return mouse_report; }
-
-    if (timer_elapsed(myr_joystick_timer) < 10) {
-        wait_ms(2);
-        return mouse_report;
-    }
-
-    myr_joystick_timer = timer_read();
+static void myr_joystick_task(void) {
+// report_mouse_t pointing_device_driver_get_report(report_mouse_t mouse_report) {
+//     if (myriad_card_init() != SKB_JOYSTICK) { return mouse_report; }
+//
+//     if (timer_elapsed(myr_joystick_timer) < 10) {
+//         wait_ms(2);
+//         return mouse_report;
+//     }
+//
+//     myr_joystick_timer = timer_read();
 
     // `analogReadPin` returns 0..1023
     int32_t y = (analogReadPin(MYRIAD_ADC1) - 512) * -1; // Note: axis is flipped
@@ -294,7 +296,7 @@ report_mouse_t pointing_device_driver_get_report(report_mouse_t mouse_report) {
     // Values are now -512..512
 
     // Create a dead zone in the middle where the mouse doesn't move
-    const int16_t dead_zone = 10;
+    const int16_t dead_zone = 60;
     if ((y < 0 && y > -1*dead_zone) || (y > 0 && y < dead_zone)) {
         y = 0;
     }
@@ -302,20 +304,67 @@ report_mouse_t pointing_device_driver_get_report(report_mouse_t mouse_report) {
         x = 0;
     }
 
-    // quadratic movement
-    x = abs(x) * x / 5000;
-    y = abs(y) * y / 5000;
+    static bool  arrows[4];
+    if (y > 120) {
+        if (!arrows[0]) {
+            arrows[0] = true;
+            register_code(KC_DOWN);
+        }
+    } else {
+        if (arrows[0]) {
+            arrows[0] = false;
+        }
+        unregister_code(KC_DOWN);
+    }
+    if (y < -120) {
+        if (!arrows[1]) {
+            arrows[1] = true;
+            register_code(KC_UP);
+        }
+    } else {
+        if (arrows[1]) {
+            arrows[1] = false;
+        }
+        unregister_code(KC_UP);
+    }
 
-    // Clamp final value to make sure we don't under/overflow
-    if (y < -127) { y = -127; }
-    if (y > 127) { y = 127; }
-    if (x < -127) { x = -127; }
-    if (x > 127) { x = 127; }
+    if (x > 120) {
+        if (!arrows[2]) {
+            arrows[2] = true;
+            register_code(KC_RIGHT);
+        }
+    } else {
+        if (arrows[2]) {
+            arrows[2] = false;
+        }
+        unregister_code(KC_RIGHT);
+    }
+    if (x < -120) {
+        if (!arrows[3]) {
+            arrows[3] = true;
+            register_code(KC_LEFT);
+        }
+    } else {
+        if (arrows[3]) {
+            arrows[3] = false;
+        }
+        unregister_code(KC_LEFT);
+    }
 
-    mouse_report.x = x;
-    mouse_report.y = y;
-
-    return mouse_report;
+//     // quadratic movement
+//     x = abs(x) * x / 5000;
+//     y = abs(y) * y / 5000;
+//
+//     // Clamp final value to make sure we don't under/overflow
+//     if (y < -127) { y = -127; }
+//     if (y > 127) { y = 127; }
+//     if (x < -127) { x = -127; }
+//     if (x > 127) { x = 127; }
+//
+//     mouse_report.x = x;
+//     mouse_report.y = y;
+//
+//     return mouse_report;
 }
 
 void pointing_device_driver_init(void) {
@@ -331,10 +380,10 @@ void myriad_task(void) {
             // Handled via hook
             break;
         case SKB_ENCODER:
-            // Handled via hook
+            myr_joystick_task();
             break;
         case SKB_JOYSTICK:
-            // Handled via pointing_device_driver_get_report
+            myr_joystick_task();
             break;
         default:
             break;
