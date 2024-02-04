@@ -25,6 +25,8 @@
 #define USB_POLLING_INTERVAL_MS 1
 
 #define SPLIT_TRANSPORT_MIRROR
+#define SPLIT_LAYER_STATE_ENABLE
+#define SPLIT_LED_STATE_ENABLE
 
 /// Vial-specific settings
 
@@ -33,6 +35,7 @@
 
 #define RGB_MATRIX_FRAMEBUFFER_EFFECTS
 #define RGB_MATRIX_KEYPRESSES
+#define RGB_MATRIX_DEFAULT_VAL 128
 
 #define CAPS_WORD_IDLE_TIMEOUT 3000  // 3 seconds.
 // Default is 2, needed because keymap has 7 layers
